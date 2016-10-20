@@ -41,7 +41,7 @@ def getLinks(url):
     links = set()
     feed = parseRSS(url)
     for entry in feed.entries:
-        entry_link = getattr(entry, 'title', '')
+        entry_link = getattr(entry, 'link', '')
         if entry_link not in all_links:
             all_links.add(entry_link)
             links.add(entry_link)
