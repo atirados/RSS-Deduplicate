@@ -19,6 +19,9 @@ out_file = sys.argv[2]
 # Global set of links
 all_links = set()
 
+# Feeds dictionary
+feeds_list = {}
+
 
 def timeit(func):
     """
@@ -39,12 +42,12 @@ def getLinks(url):
     Returns all unique links from a RSS feed url
     """
     links = set()
+    print("Parsing feed " + url)
     feed = parseRSS(url)
     for entry in feed.entries:
         entry_link = getattr(entry, 'link', '')
-        if entry_link not in all_links:
-            all_links.add(entry_link)
-            links.add(entry_link)
+        links.add(entry_link)
+    print("... Completed")
     return links
 
 
@@ -57,27 +60,32 @@ def parseRSS(url):
 
 @timeit
 def run():
-    """
-    Main function that processes and writes
-    the non-redundant feeds to an output file.
-    """
     with open(in_file) as in_tsv:
-        with open(out_file, "w") as out_tsv:
-            tsvreader = csv.reader(in_tsv, delimiter="\t")
-            # skip header
-            next(tsvreader, None)
-            out_tsv.write("#Feed ID\tURL\n")
-            print("Parsing RSS Feeds...")
-            for line in tsvreader:
-                feed_url = line[1]
-                links = getLinks(feed_url)
-                if links:  # not empty set
-                    out_tsv.write(line[0] + "\t" + line[1] + "\n")
-                    print("Feed with ID " + line[0] + " not redundant.")
-                else:
-                    print("Feed with ID " +
-                          line[0] + " redundant. Deduplicated.")
-    print("... RSS Parsing Completed")
+        tsvreader = csv.reader(in_tsv, delimiter="\t")
+        # skip header
+        next(tsvreader, None)
+        for line in tsvreader:
+            feed_id = line[0]
+            feed_url = line[1]
+            feed_info = (feed_id, feed_url)
+            links_list = getLinks(feed_url)
+            feeds_list[feed_info] = links_list
+    sorted_dict = sorted(feeds_list.items(),
+                         key=lambda x: len(x[1]), reverse=True)
+
+    print("Analizing feeds...")
+    for i in sorted_dict:
+        write = False
+        for k in i[1]:
+            if k in all_links:
+                continue
+            else:
+                write = True
+                all_links.add(k)
+        if write:
+            print("FEED WITH ID " + i[0][0] + " NOT REDUNDANT")
+        else:
+            print("FEED WITH ID " + i[0][0] + " REDUNDANT")
 
 
 run()
